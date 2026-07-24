@@ -1,0 +1,28 @@
+version: "29"
+services:
+  website:
+    image: nginx
+    ports:
+      - "9091:80"
+    restart: always
+  db:
+    image: postgres:17
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: chaukz
+      POSTGRES_PASSWORD: bonicc33
+      POSTGRES_DB: storeDB
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
