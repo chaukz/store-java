@@ -1,18 +1,31 @@
 package com.chaukz.store.model;
 
-public class Address {
-    private String street;
-    private String city;
-    private String province;
-    public int zipCode;
+import jakarta.persistence.*;
+import lombok.*;
 
-    public Address(String street, String city, String province, int zipCode) {
-        this.street = street;
-        this.city = city;
-        this.province = province;
-        this.zipCode = zipCode;
-    }
-    public String toString() {
-        return super.toString();
-    }
+@Entity
+@Table(name = "addresses")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class Address {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    private String street;
+
+    private String city;
+
+    private String province;
+
+    private String postalCode;
+
+    private String country;
 }

@@ -1,44 +1,40 @@
 package com.chaukz.store.model;
 
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "products")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Product {
-    private String name;
-    private String description;
-    private String image;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id")
     private Category category;
 
-    public Product(String name, String description, String image, Category category) {
-        this.name = name;
-        this.description = description;
-        this.image = image;
-        this.category = category;
-    }
-    public String getName() {
-        return name;
-    }
-    public String getDescription() {
-        return description;
-    }
-    public String getImage() {
-        return image;
-    }
-    public Category getCategory() {
-        return category;
-    }
+    private String name;
 
-    public void setName(String name) {
-        this.name = name;
-    }
-    public void setDescription(String description) {
-        this.description = description;
-    }
-    public void setImage(String image) {
-        this.image = image;
-    }
-    public void setCategory(Category category) {
-        this.category = category;
-    }
+    private String description;
 
-    public String toString() {
-        return super.toString();
-    }
+    private String sku;
+
+    private String brand;
+
+    private BigDecimal price;
+
+    private Integer stockQuantity;
+
+    private Boolean active;
+
+    private LocalDateTime createdAt;
 }

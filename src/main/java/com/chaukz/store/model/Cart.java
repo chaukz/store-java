@@ -1,9 +1,25 @@
 package com.chaukz.store.model;
 
-public class Cart {
-    public CartItem[] items;
-    public Address shippingAddress;
-    public Payment payment;
-    public Order order;
+import jakarta.persistence.*;
+import lombok.*;
 
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "carts")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class Cart {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    private LocalDateTime createdAt;
 }

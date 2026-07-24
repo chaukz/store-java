@@ -1,17 +1,31 @@
 package com.chaukz.store.model;
 
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "product_variants")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class ProductVariant {
-    private String name;
-    private String description;
-    private String image;
 
-    public ProductVariant(String name, String description, String image) {
-        this.name = name;
-        this.description = description;
-        this.image = image;
-    }
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    public String toString() {
-        return super.toString();
-    }
+    @ManyToOne
+    @JoinColumn(name = "product_id")
+    private Product product;
+
+    private String size;
+
+    private String color;
+
+    private BigDecimal price;
+
+    private Integer stockQuantity;
 }

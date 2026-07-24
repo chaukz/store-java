@@ -1,80 +1,38 @@
 package com.chaukz.store.model;
-import java.util.Date;
+
+import com.chaukz.store.model.enums.Role;
 import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    //Fields
-    private String name;
+    private String firstName;
+
     private String lastName;
-    private String phone;
-    private Date dob;
+
     private String email;
+
     private String password;
 
-    public User() {}
+    private String phone;
 
-    public User(String name, String lastName, String phone, Date dob, String email, String password){
-        this.name = name;
-        this.lastName = lastName;
-        this.phone = phone;
-        this.dob = dob;
-        this.email = email;
-        this.password = password;
-    }
+    private LocalDate dob;
 
-    public String getName() {
-        return name;
-    }
-    public String getLastName() {
-        return lastName;
-    }
-    public String getPhone() {
-        return phone;
-    }
-    public Date getDob() {
-        return dob;
-    }
-    public String getEmail() {
-        return email;
-    }
-    public String getPassword() {
-        return password;
-    }
+    @Enumerated(EnumType.STRING)
+    private Role role;
 
-    //Setters
-    public void setName(String name) {
-        this.name = name;
-    }
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-    public void setDob(Date dob) {
-        this.dob = dob;
-    }
-    public void setEmail(String email) {
-        this.email = email;
-    }
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public Long getId() {
-        return id;
-    }
-    public void setId(Long id) {
-        this.id = id;
-    }
-    public String toString() {
-        return super.toString();
-    }
+    private LocalDateTime createdAt;
 }
