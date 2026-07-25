@@ -1,36 +1,31 @@
 package com.chaukz.store.model;
 
-import com.chaukz.store.model.enums.OrderStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "orders")
+@Table(name = "order_items")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Order {
+public class OrderItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+    @JoinColumn(name = "order_id")
+    private Order order;
 
     @ManyToOne
-    @JoinColumn(name = "address_id")
-    private Address address;
+    @JoinColumn(name = "product_variant_id")
+    private ProductVariant productVariant;
 
-    @Enumerated(EnumType.STRING)
-    private OrderStatus orderStatus;
+    private Integer quantity;
 
-    private BigDecimal total;
-
-    private LocalDateTime createdAt;
+    private BigDecimal price;
 }

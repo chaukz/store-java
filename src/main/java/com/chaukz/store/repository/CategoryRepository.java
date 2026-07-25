@@ -1,4 +1,7 @@
 package com.chaukz.store.repository;
 
-public class CategoryRepository {
+import com.chaukz.store.model.Category;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface CategoryRepository extends JpaRepository<Category, Long> {
 }
