@@ -1,0 +1,113 @@
+### ========================================
+### CATEGORY ENDPOINTS
+### ========================================
+
+### Create Category
+POST http://localhost:8081/api/admin/categories
+Content-Type: application/json
+
+{
+  "name": "Shoes",
+  "description": "Footwear"
+}
+
+### List Categories
+GET http://localhost:8081/api/categories
+
+### Get Category by id
+GET http://localhost:8081/api/categories/1
+
+### 404 case - category that doesn't exist
+GET http://localhost:8081/api/categories/999
+
+### Update Category
+PUT http://localhost:8081/api/admin/categories/1
+Content-Type: application/json
+
+{
+  "name": "Shoes & Sneakers",
+  "description": "Footwear for everyone"
+}
+
+### Validation error - missing required name
+POST http://localhost:8081/api/admin/categories
+Content-Type: application/json
+
+{
+  "description": "no name here"
+}
+
+### Delete Category
+DELETE http://localhost:8081/api/admin/categories/1
+
+
+### ========================================
+### PRODUCT ENDPOINTS
+### ========================================
+
+### Create Product
+POST http://localhost:8081/api/admin/products
+Content-Type: application/json
+
+{
+  "categoryId": 1,
+  "name": "Running Sneaker",
+  "description": "Lightweight daily trainer",
+  "sku": "RUN-001",
+  "brand": "Nova",
+  "price": 899.99,
+  "stockQuantity": 50
+}
+
+### List Products
+GET http://localhost:8081/api/products
+
+### Filter Products by category
+GET http://localhost:8081/api/products?categoryId=1
+
+### Search Products by name
+GET http://localhost:8081/api/products/search?query=sneaker
+
+### Get Product by id
+GET http://localhost:8081/api/products/1
+
+### Update Product
+PUT http://localhost:8081/api/admin/products/1
+Content-Type: application/json
+
+{
+  "categoryId": 1,
+  "name": "Running Sneaker Pro",
+  "description": "Updated lightweight daily trainer",
+  "sku": "RUN-001",
+  "brand": "Nova",
+  "price": 949.99,
+  "stockQuantity": 40
+}
+
+### 404 case - product that doesn't exist
+GET http://localhost:8081/api/products/999
+
+### 404 case - bad category id on create
+POST http://localhost:8081/api/admin/products
+Content-Type: application/json
+
+{
+  "categoryId": 999,
+  "name": "Ghost Product",
+  "price": 10.00,
+  "stockQuantity": 5
+}
+
+### Validation error - missing required name
+POST http://localhost:8081/api/admin/products
+Content-Type: application/json
+
+{
+  "categoryId": 1,
+  "price": 10.00,
+  "stockQuantity": 5
+}
+
+### Delete Product
+DELETE http://localhost:8081/api/admin/products/1
