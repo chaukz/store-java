@@ -37,7 +37,7 @@ Content-Type: application/json
   "description": "no name here"
 }
 
-### Delete Category
+### Delete Category (run last - other sections depend on category id 1)
 DELETE http://localhost:8081/api/admin/categories/1
 
 
@@ -109,5 +109,147 @@ Content-Type: application/json
   "stockQuantity": 5
 }
 
-### Delete Product
+### Delete Product (run last - variant section depends on product id 1)
 DELETE http://localhost:8081/api/admin/products/1
+
+
+### ========================================
+### PRODUCT VARIANT ENDPOINTS
+### ========================================
+
+### Create Variant
+POST http://localhost:8081/api/admin/products/1/variants
+Content-Type: application/json
+
+{
+  "size": "US 9",
+  "color": "Black",
+  "price": 899.99,
+  "stockQuantity": 20
+}
+
+### List Variants for a Product
+GET http://localhost:8081/api/products/1/variants
+
+### Update Variant
+PUT http://localhost:8081/api/admin/variants/1
+Content-Type: application/json
+
+{
+  "size": "US 9",
+  "color": "Midnight Black",
+  "price": 849.99,
+  "stockQuantity": 15
+}
+
+### 404 case - bad product id on create
+POST http://localhost:8081/api/admin/products/999/variants
+Content-Type: application/json
+
+{
+  "size": "US 9",
+  "color": "Black",
+  "price": 899.99,
+  "stockQuantity": 20
+}
+
+### Delete Variant
+DELETE http://localhost:8081/api/admin/variants/1
+
+
+### ========================================
+### USER ENDPOINTS
+### ========================================
+### NOTE: adjust paths below if your UserController differs -
+### these follow the roadmap spec (POST /api/users/register, GET/PUT /api/users/{id})
+
+### Register User
+POST http://localhost:8081/api/users/register
+Content-Type: application/json
+
+{
+  "firstName": "Thabo",
+  "lastName": "Chauke",
+  "email": "thabo@example.com",
+  "password": "changeme123",
+  "phone": "0821234567",
+  "dob": "2000-05-14",
+  "role": "CUSTOMER"
+}
+
+### Get User by id
+GET http://localhost:8081/api/users/1
+
+### Update User
+PUT http://localhost:8081/api/users/1
+Content-Type: application/json
+
+{
+  "firstName": "Thabo",
+  "lastName": "Chauke",
+  "email": "thabo@example.com",
+  "password": "changeme123",
+  "phone": "0821234567",
+  "dob": "2000-05-14",
+  "role": "CUSTOMER"
+}
+
+### 404 case - user that doesn't exist
+GET http://localhost:8081/api/users/999
+
+### Validation error - missing required first name
+POST http://localhost:8081/api/users/register
+Content-Type: application/json
+
+{
+  "lastName": "Chauke",
+  "email": "thabo@example.com",
+  "password": "changeme123"
+}
+
+
+### ========================================
+### ADDRESS ENDPOINTS
+### ========================================
+
+### Create Address
+POST http://localhost:8081/api/users/1/addresses
+Content-Type: application/json
+
+{
+  "street": "12 Baobab Ave",
+  "city": "Mbombela",
+  "province": "Mpumalanga",
+  "postalCode": "1200",
+  "country": "South Africa"
+}
+
+### List Addresses for a User
+GET http://localhost:8081/api/users/1/addresses
+
+### Update Address
+PUT http://localhost:8081/api/addresses/1
+Content-Type: application/json
+
+{
+  "street": "14 Baobab Ave",
+  "city": "Mbombela",
+  "province": "Mpumalanga",
+  "postalCode": "1200",
+  "country": "South Africa"
+}
+
+### 404 case - bad user id on create
+POST http://localhost:8081/api/users/999/addresses
+Content-Type: application/json
+
+{
+  "street": "Ghost St",
+  "city": "Nowhere",
+  "province": "N/A",
+  "postalCode": "0000",
+  "country": "N/A"
+}
+
+### Delete Address
+DELETE http://localhost:8081/api/addresses/1
