@@ -3,7 +3,6 @@ package com.chaukz.store.service;
 import com.chaukz.store.dto.request.ProductRequest;
 import com.chaukz.store.dto.response.ProductResponse;
 import com.chaukz.store.exception.ResourceNotFoundException;
-import com.chaukz.store.mapper.ProductMapper;
 import com.chaukz.store.model.Product;
 import com.chaukz.store.repository.ProductRepository;
 import org.springframework.stereotype.Service;
