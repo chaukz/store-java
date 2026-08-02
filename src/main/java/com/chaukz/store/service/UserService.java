@@ -7,18 +7,22 @@ import com.chaukz.store.mapper.UserMapper;
 import com.chaukz.store.model.User;
 import com.chaukz.store.repository.UserRepository;
 import org.springframework.stereotype.Service;
-
+import com.chaukz.store.repository.CartRepository;
+import com.chaukz.store.model.Cart;
 import java.util.List;
+import java.time.LocalDateTime;
+
 
 @Service
 public class UserService {
 
     private final UserRepository UserRepository;
     private final UserMapper UserMapper;
-
-    public UserService(UserRepository UserRepository, UserMapper UserMapper) {
+    private final CartRepository CartRepository;
+    public UserService(UserRepository UserRepository, UserMapper UserMapper, CartRepository CartRepository) {
         this.UserRepository = UserRepository;
         this.UserMapper = UserMapper;
+        this.CartRepository = CartRepository;
     }
 
     public List<UserResponse> getAll() {
@@ -50,6 +54,11 @@ public class UserService {
     public UserResponse create(UserRequest request) {
         User user = UserMapper.toEntity(request);
         User saved = UserRepository.save(user);
+        Cart cart = new Cart();
+        cart.setUser(saved);
+        cart.setCreatedAt(LocalDateTime.now());
+        CartRepository.save(cart);
+
         return UserMapper.toResponse(saved);
     }
 

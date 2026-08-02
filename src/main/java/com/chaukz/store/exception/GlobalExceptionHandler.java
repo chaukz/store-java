@@ -46,4 +46,11 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ErrorResponse.of("Something went wrong", HttpStatus.INTERNAL_SERVER_ERROR.value()));
     }
+
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientStock(InsufficientStockException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of(ex.getMessage(), HttpStatus.BAD_REQUEST.value()));
+    }
 }
