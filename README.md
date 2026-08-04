@@ -80,9 +80,9 @@ The schema is relational and models a standard e-commerce structure:
 - [x] Category CRUD — full public + admin endpoints
 - [x] Product CRUD — includes category lookup, filtering, and search
 - [x] Product Variant CRUD — size/color variants scoped to a product
-- [ ] User registration + address management
-- [ ] Cart (add/update/remove items, stock validation)
-- [ ] Checkout → order creation
+- [x] User registration + address management
+- [x] Cart (add/update/remove items, stock validation)
+- [x] Checkout → order creation
 - [ ] Payment status handling
 - [ ] Admin order fulfillment management
 - [ ] Authentication & authorization (Spring Security + JWT)
