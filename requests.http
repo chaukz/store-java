@@ -369,3 +369,32 @@ DELETE {{host}}/api/admin/products/{{productId}}
 
 ### Delete Category
 DELETE {{host}}/api/admin/categories/{{categoryId}}
+
+### Note the variant's stock before checkout
+GET {{host}}/api/products/{{productId}}/variants
+
+### Add to cart, then checkout
+POST {{host}}/api/users/{{userId}}/cart/items
+Content-Type: application/json
+
+{ "productVariantId": {{variantId}}, "quantity": 3 }
+
+### Checkout
+POST {{host}}/api/users/{{userId}}/checkout
+Content-Type: application/json
+
+{ "addressId": {{addressId}}, "paymentMethod": "CARD" }
+
+> {% client.global.set("orderId", response.body.id); %}
+
+### Cart should now be EMPTY
+GET {{host}}/api/users/{{userId}}/cart
+
+### Variant stock should be DOWN by 3
+GET {{host}}/api/products/{{productId}}/variants
+
+### Cancel it
+POST {{host}}/api/orders/{{orderId}}/cancel
+
+### Stock should be BACK UP by 3
+GET {{host}}/api/products/{{productId}}/variants

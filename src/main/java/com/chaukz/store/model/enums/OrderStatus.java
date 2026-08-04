@@ -1,9 +1,10 @@
 package com.chaukz.store.model.enums;
 
 public enum OrderStatus {
-PENDING,
-    PAID,
+    PENDING,
+    CONFIRMED,
+    PROCESSING,
     SHIPPED,
     DELIVERED,
-    CANCELLED;
+    CANCELLED
 }
