@@ -1,7 +1,8 @@
 @host = http://localhost:8081
 
 ### ============================================================
-### SETUP - run these top to bottom, ids are captured automatically
+### SETUP - run these 5 first, in order. Ids are captured for everything below.
+### Re-run this whole block any time you restart IntelliJ or run CLEANUP.
 ### ============================================================
 
 ### 1. Create Category
@@ -35,7 +36,7 @@ Content-Type: application/json
     client.global.set("productId", response.body.id);
 %}
 
-### 3. Create Variant (stock = 20, used by the cart tests below)
+### 3. Create Variant (stock = 20)
 POST {{host}}/api/admin/products/{{productId}}/variants
 Content-Type: application/json
 
@@ -201,7 +202,7 @@ Content-Type: application/json
 
 
 ### ============================================================
-### CART  - run in order, this sequence proves the business rules
+### CART - run in order, this sequence proves the business rules
 ### ============================================================
 
 ### Empty cart (should exist already, created at registration)
@@ -249,7 +250,62 @@ DELETE {{host}}/api/users/{{userId}}/cart
 
 
 ### ============================================================
-### ERROR CASES - each should return standardized error JSON
+### CHECKOUT - run this whole block in order.
+### The three stock checks are the real test.
+### ============================================================
+
+### C1. Stock BEFORE checkout - note the number
+GET {{host}}/api/products/{{productId}}/variants
+
+### C2. Add 3 to cart
+POST {{host}}/api/users/{{userId}}/cart/items
+Content-Type: application/json
+
+{
+  "productVariantId": {{variantId}},
+  "quantity": 3
+}
+
+### C3. Checkout - expect 201, status PENDING, paymentStatus PENDING
+POST {{host}}/api/users/{{userId}}/checkout
+Content-Type: application/json
+
+{
+  "addressId": {{addressId}},
+  "paymentMethod": "CARD"
+}
+
+> {%
+    client.global.set("orderId", response.body.id);
+%}
+
+### C4. Cart must now be EMPTY (items [], total 0)
+GET {{host}}/api/users/{{userId}}/cart
+
+### C5. Stock must be DOWN by 3 vs C1
+GET {{host}}/api/products/{{productId}}/variants
+
+### C6. Order history for this user
+GET {{host}}/api/users/{{userId}}/orders
+
+### C7. Get the order by id
+GET {{host}}/api/orders/{{orderId}}
+
+### C8. Admin - all orders
+GET {{host}}/api/admin/orders
+
+### C9. Cancel the order
+POST {{host}}/api/orders/{{orderId}}/cancel
+
+### C10. Stock must be BACK UP by 3 vs C5
+GET {{host}}/api/products/{{productId}}/variants
+
+### C11. Cancel again - expect 400, already cancelled
+POST {{host}}/api/orders/{{orderId}}/cancel
+
+
+### ============================================================
+### ERROR CASES
 ### ============================================================
 
 ### 404 - category that doesn't exist
@@ -260,6 +316,9 @@ GET {{host}}/api/products/999999
 
 ### 404 - user that doesn't exist
 GET {{host}}/api/users/999999
+
+### 404 - order that doesn't exist
+GET {{host}}/api/orders/999999
 
 ### 404 - bad category id on product create
 POST {{host}}/api/admin/products
@@ -304,7 +363,16 @@ Content-Type: application/json
   "quantity": 1
 }
 
-### 400 - insufficient stock (variant only has 20)
+### 400 - checkout with an empty cart
+POST {{host}}/api/users/{{userId}}/checkout
+Content-Type: application/json
+
+{
+  "addressId": {{addressId}},
+  "paymentMethod": "CARD"
+}
+
+### 400 - insufficient stock
 POST {{host}}/api/users/{{userId}}/cart/items
 Content-Type: application/json
 
@@ -350,9 +418,19 @@ Content-Type: application/json
   "quantity": 0
 }
 
+### 400 - invalid payment method
+POST {{host}}/api/users/{{userId}}/checkout
+Content-Type: application/json
+
+{
+  "addressId": {{addressId}},
+  "paymentMethod": "BITCOIN"
+}
+
 
 ### ============================================================
-### CLEANUP - destructive, run last (breaks everything above)
+### CLEANUP - DESTRUCTIVE. Everything above stops working after this.
+### Only run when you want a clean database. Re-run SETUP afterwards.
 ### ============================================================
 
 ### Delete Address
@@ -369,32 +447,3 @@ DELETE {{host}}/api/admin/products/{{productId}}
 
 ### Delete Category
 DELETE {{host}}/api/admin/categories/{{categoryId}}
-
-### Note the variant's stock before checkout
-GET {{host}}/api/products/{{productId}}/variants
-
-### Add to cart, then checkout
-POST {{host}}/api/users/{{userId}}/cart/items
-Content-Type: application/json
-
-{ "productVariantId": {{variantId}}, "quantity": 3 }
-
-### Checkout
-POST {{host}}/api/users/{{userId}}/checkout
-Content-Type: application/json
-
-{ "addressId": {{addressId}}, "paymentMethod": "CARD" }
-
-> {% client.global.set("orderId", response.body.id); %}
-
-### Cart should now be EMPTY
-GET {{host}}/api/users/{{userId}}/cart
-
-### Variant stock should be DOWN by 3
-GET {{host}}/api/products/{{productId}}/variants
-
-### Cancel it
-POST {{host}}/api/orders/{{orderId}}/cancel
-
-### Stock should be BACK UP by 3
-GET {{host}}/api/products/{{productId}}/variants
