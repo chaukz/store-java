@@ -6,6 +6,7 @@ import com.chaukz.store.exception.ResourceNotFoundException;
 import com.chaukz.store.mapper.UserMapper;
 import com.chaukz.store.model.User;
 import com.chaukz.store.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.chaukz.store.repository.CartRepository;
 import com.chaukz.store.model.Cart;
@@ -19,9 +20,12 @@ public class UserService {
     private final UserRepository UserRepository;
     private final UserMapper UserMapper;
     private final CartRepository CartRepository;
-    public UserService(UserRepository UserRepository, UserMapper UserMapper, CartRepository CartRepository) {
+    private final PasswordEncoder passwordEncoder;
+
+    public UserService(UserRepository UserRepository, UserMapper UserMapper,PasswordEncoder passwordEncoder, CartRepository CartRepository) {
         this.UserRepository = UserRepository;
         this.UserMapper = UserMapper;
+        this.passwordEncoder = passwordEncoder;
         this.CartRepository = CartRepository;
     }
 
@@ -53,6 +57,7 @@ public class UserService {
 
     public UserResponse create(UserRequest request) {
         User user = UserMapper.toEntity(request);
+        user.setPassword(passwordEncoder.encode(request.password()));
         User saved = UserRepository.save(user);
         Cart cart = new Cart();
         cart.setUser(saved);
@@ -65,6 +70,7 @@ public class UserService {
     public UserResponse update(Long id, UserRequest request) {
         User user = findUserOrThrow(id);
         UserMapper.updateEntity(user, request);
+        user.setPassword(passwordEncoder.encode(request.password()));
         User saved = UserRepository.save(user);
         return UserMapper.toResponse(saved);
     }
