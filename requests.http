@@ -447,3 +447,15 @@ DELETE {{host}}/api/admin/products/{{productId}}
 
 ### Delete Category
 DELETE {{host}}/api/admin/categories/{{categoryId}}
+
+### Correct login - expect 200, real token
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "thabo@example.com", "password": "changeme123" }
+
+### Wrong password - expect 401
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "thabo@example.com", "password": "wrongpassword" }
