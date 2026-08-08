@@ -86,7 +86,7 @@ The schema is relational and models a standard e-commerce structure:
 - [x] Payment status handling
 - [x] Admin order fulfillment management
 - [x] Authentication & authorization (Spring Security + JWT)
-- [ ] Pagination, filtering, and API documentation (OpenAPI/Swagger)
+- [x] Pagination, filtering, and API documentation (OpenAPI/Swagger)
 - [ ] Unit and integration tests
 
 ## API Overview (implemented so far)
