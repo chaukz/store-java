@@ -1,6 +1,7 @@
 package com.chaukz.store.service;
 
 import com.chaukz.store.dto.request.UpdatePaymentStatusRequest;
+import com.chaukz.store.dto.response.PageResponse;
 import com.chaukz.store.dto.response.PaymentResponse;
 import com.chaukz.store.exception.InvalidOrderStatusException;
 import com.chaukz.store.exception.ResourceNotFoundException;
@@ -11,21 +12,19 @@ import com.chaukz.store.model.enums.OrderStatus;
 import com.chaukz.store.model.enums.PaymentStatus;
 import com.chaukz.store.repository.OrderRepository;
 import com.chaukz.store.repository.PaymentRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 @Service
 public class PaymentService {
 
-    /**
-     * Which payment statuses can follow which. A terminal status has no exits.
-     */
     private static final Map<PaymentStatus, Set<PaymentStatus>> ALLOWED_TRANSITIONS =
             new EnumMap<>(PaymentStatus.class);
 
@@ -55,17 +54,18 @@ public class PaymentService {
         return paymentMapper.toResponse(payment);
     }
 
-    public List<PaymentResponse> getAll() {
-        return paymentRepository.findAll()
-                .stream()
-                .map(paymentMapper::toResponse)
-                .toList();
+    /**
+     * Admin payment list, paginated. Pass a status to see only payments in
+     * that state, or leave it null to see everything.
+     */
+    public PageResponse<PaymentResponse> getAll(PaymentStatus status, Pageable pageable) {
+        Page<Payment> payments = (status != null)
+                ? paymentRepository.findByPaymentStatus(status, pageable)
+                : paymentRepository.findAll(pageable);
+
+        return PageResponse.from(payments.map(paymentMapper::toResponse));
     }
 
-    /**
-     * Updating a payment status also moves the order. A paid order becomes
-     * CONFIRMED; a refunded one becomes CANCELLED.
-     */
     @Transactional
     public PaymentResponse updateStatus(Long paymentId, UpdatePaymentStatusRequest request) {
         Payment payment = paymentRepository.findById(paymentId)

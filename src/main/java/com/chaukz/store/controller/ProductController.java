@@ -1,14 +1,19 @@
 package com.chaukz.store.controller;
 
 import com.chaukz.store.dto.request.ProductRequest;
+import com.chaukz.store.dto.response.PageResponse;
 import com.chaukz.store.dto.response.ProductResponse;
 import com.chaukz.store.service.ProductService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.math.BigDecimal;
 
 @RestController
 public class ProductController {
@@ -19,27 +24,31 @@ public class ProductController {
         this.productService = productService;
     }
 
-    // Public endpoints
-
+    @Operation(summary = "Browse products",
+            description = "All filters are optional and combinable. Omit any of them to widen the search.")
     @GetMapping("/api/products")
-    public List<ProductResponse> getAll(@RequestParam(required = false) Long categoryId) {
-        if (categoryId != null) {
-            return productService.getByCategoryId(categoryId);
-        }
-        return productService.getAll();
+    public PageResponse<ProductResponse> getAll(
+            @Parameter(description = "Filter to a single category") @RequestParam(required = false) Long categoryId,
+            @Parameter(description = "Minimum price, inclusive") @RequestParam(required = false) BigDecimal minPrice,
+            @Parameter(description = "Maximum price, inclusive") @RequestParam(required = false) BigDecimal maxPrice,
+            @Parameter(description = "Only show products with stock > 0") @RequestParam(required = false) Boolean inStock,
+            @Parameter(description = "Case-insensitive partial match on product name") @RequestParam(required = false) String query,
+            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+        return productService.getAll(categoryId, minPrice, maxPrice, inStock, query, pageable);
     }
 
+    @Operation(summary = "Search products by name (convenience wrapper around /api/products)")
     @GetMapping("/api/products/search")
-    public List<ProductResponse> search(@RequestParam String query) {
-        return productService.search(query);
+    public PageResponse<ProductResponse> search(
+            @RequestParam String query,
+            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+        return productService.getAll(null, null, null, null, query, pageable);
     }
 
     @GetMapping("/api/products/{id}")
     public ProductResponse getById(@PathVariable Long id) {
         return productService.getById(id);
     }
-
-    // Admin endpoints
 
     @PostMapping("/api/admin/products")
     public ResponseEntity<ProductResponse> create(@Valid @RequestBody ProductRequest request) {

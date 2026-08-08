@@ -1,14 +1,19 @@
 package com.chaukz.store.service;
 
 import com.chaukz.store.dto.request.ProductRequest;
+import com.chaukz.store.dto.response.PageResponse;
 import com.chaukz.store.dto.response.ProductResponse;
 import com.chaukz.store.exception.ResourceNotFoundException;
+import com.chaukz.store.mapper.ProductMapper;
 import com.chaukz.store.model.Product;
 import com.chaukz.store.repository.ProductRepository;
+import com.chaukz.store.repository.ProductSpecifications;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import com.chaukz.store.mapper.ProductMapper;
 
-import java.util.List;
+import java.math.BigDecimal;
 
 @Service
 public class ProductService {
@@ -21,25 +26,23 @@ public class ProductService {
         this.productMapper = productMapper;
     }
 
-    public List<ProductResponse> getAll() {
-        return productRepository.findAll()
-                .stream()
-                .map(productMapper::toResponse)
-                .toList();
-    }
+    /**
+     * Single entry point for browsing products. Every filter is optional -
+     * pass only categoryId for "products in this category", only minPrice/
+     * maxPrice for "products in this price range", any combination, or
+     * nothing at all for "everything, paginated".
+     */
+    public PageResponse<ProductResponse> getAll(Long categoryId,
+                                                BigDecimal minPrice,
+                                                BigDecimal maxPrice,
+                                                Boolean inStockOnly,
+                                                String nameContains,
+                                                Pageable pageable) {
+        Specification<Product> spec = ProductSpecifications.withFilters(
+                categoryId, minPrice, maxPrice, inStockOnly, nameContains);
 
-    public List<ProductResponse> getByCategoryId(Long categoryId) {
-        return productRepository.findByCategoryId(categoryId)
-                .stream()
-                .map(productMapper::toResponse)
-                .toList();
-    }
-
-    public List<ProductResponse> search(String query) {
-        return productRepository.findByNameContainingIgnoreCase(query)
-                .stream()
-                .map(productMapper::toResponse)
-                .toList();
+        Page<Product> products = productRepository.findAll(spec, pageable);
+        return PageResponse.from(products.map(productMapper::toResponse));
     }
 
     public ProductResponse getById(Long id) {

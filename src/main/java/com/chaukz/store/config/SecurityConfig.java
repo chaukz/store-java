@@ -1,7 +1,6 @@
 package com.chaukz.store.config;
 
 import com.chaukz.store.exception.ErrorResponse;
-import tools.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -14,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 public class SecurityConfig {
@@ -47,16 +47,21 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**").permitAll()
                 // Public: you can't be logged in yet when you're trying to log in
                 .requestMatchers("/api/auth/**").permitAll()
+                // Public: the API docs themselves, and the assets Swagger UI needs to render
+                .requestMatchers(
+                        "/swagger-ui.html",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/v3/api-docs"
+                ).permitAll()
                 // Admin-only: everything under /api/admin/**
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // Everything else just needs SOME valid login (cart, checkout, orders, addresses)
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
-                // No token / invalid token on a protected route
                 .authenticationEntryPoint((request, response, authException) ->
                     writeError(response, HttpStatus.UNAUTHORIZED, "Authentication required"))
-                // Valid token, but wrong role (e.g. CUSTOMER hitting /api/admin/**)
                 .accessDeniedHandler((request, response, accessDeniedException) ->
                     writeError(response, HttpStatus.FORBIDDEN, "You do not have permission to access this resource"))
             )
@@ -65,11 +70,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /**
-     * Writes a response in the same {message, status, timestamp} shape as
-     * GlobalExceptionHandler, so 401/403 look identical to every other error
-     * in the API instead of Spring Security's default blank body.
-     */
     private void writeError(jakarta.servlet.http.HttpServletResponse response,
                             HttpStatus status,
                             String message) throws java.io.IOException {

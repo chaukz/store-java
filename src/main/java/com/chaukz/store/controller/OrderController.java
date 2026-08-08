@@ -2,8 +2,12 @@ package com.chaukz.store.controller;
 
 import com.chaukz.store.dto.request.CheckoutRequest;
 import com.chaukz.store.dto.response.OrderResponse;
+import com.chaukz.store.dto.response.PageResponse;
+import com.chaukz.store.model.enums.OrderStatus;
 import com.chaukz.store.service.OrderService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -41,7 +45,9 @@ public class OrderController {
     }
 
     @GetMapping("/api/admin/orders")
-    public List<OrderResponse> getAll() {
-        return orderService.getAll();
+    public PageResponse<OrderResponse> getAll(
+            @RequestParam(required = false) OrderStatus status,
+            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
+        return orderService.getAll(status, pageable);
     }
 }

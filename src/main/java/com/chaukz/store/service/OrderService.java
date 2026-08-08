@@ -2,6 +2,7 @@ package com.chaukz.store.service;
 
 import com.chaukz.store.dto.request.CheckoutRequest;
 import com.chaukz.store.dto.response.OrderResponse;
+import com.chaukz.store.dto.response.PageResponse;
 import com.chaukz.store.exception.InsufficientStockException;
 import com.chaukz.store.exception.InvalidOrderStatusException;
 import com.chaukz.store.exception.ResourceNotFoundException;
@@ -23,6 +24,8 @@ import com.chaukz.store.repository.OrderItemRepository;
 import com.chaukz.store.repository.OrderRepository;
 import com.chaukz.store.repository.PaymentRepository;
 import com.chaukz.store.repository.ProductVariantRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -146,20 +149,21 @@ public class OrderService {
                 .toList();
     }
 
-    /**
-     * Any logged-in user can request any order id - the ownership check is
-     * what stops that from leaking someone else's order. Admins bypass it.
-     */
     public OrderResponse getById(Long orderId) {
         Order order = findOrderOwnedByCurrentUserOrAdmin(orderId);
         return buildResponse(order);
     }
 
-    public List<OrderResponse> getAll() {
-        return orderRepository.findAll()
-                .stream()
-                .map(this::buildResponse)
-                .toList();
+    /**
+     * Admin order list, paginated. Pass a status to see only orders in that
+     * state, or leave it null to see everything.
+     */
+    public PageResponse<OrderResponse> getAll(OrderStatus status, Pageable pageable) {
+        Page<Order> orders = (status != null)
+                ? orderRepository.findByOrderStatus(status, pageable)
+                : orderRepository.findAll(pageable);
+
+        return PageResponse.from(orders.map(this::buildResponse));
     }
 
     @Transactional
