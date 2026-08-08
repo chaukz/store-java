@@ -56,10 +56,10 @@ POST {{host}}/api/admin/users
 Content-Type: application/json
 
 {
-  "firstName": "Thabo",
+  "firstName": "Boni",
   "lastName": "Chauke",
-  "email": "thabo@example.com",
-  "password": "changeme123",
+  "email": "test@example.com",
+  "password": "test123",
   "phone": "0821234567",
   "dob": "2000-05-14",
   "role": "CUSTOMER"
@@ -459,3 +459,45 @@ POST {{host}}/api/auth/login
 Content-Type: application/json
 
 { "email": "thabo@example.com", "password": "wrongpassword" }
+### No token
+GET {{host}}/api/whoami
+
+### Login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "test@example.com", "password": "test123" }
+
+> {% client.global.set("jwtToken", response.body.token); %}
+
+### With token
+GET {{host}}/api/whoami
+Authorization: Bearer {{jwtToken}}
+
+### First create - expect 201
+POST {{host}}/api/admin/users
+Content-Type: application/json
+
+{
+  "firstName": "Boni",
+  "lastName": "Chauke",
+  "email": "boni@example.com",
+  "password": "changeme123",
+  "phone": "0821234567",
+  "dob": "2000-05-14",
+  "role": "CUSTOMER"
+}
+
+### Second create, same email - expect 409
+POST {{host}}/api/admin/users
+Content-Type: application/json
+
+{
+  "firstName": "Boni",
+  "lastName": "Chauke",
+  "email": "boni@example.com",
+  "password": "changeme123",
+  "phone": "0821234567",
+  "dob": "2000-05-14",
+  "role": "CUSTOMER"
+}

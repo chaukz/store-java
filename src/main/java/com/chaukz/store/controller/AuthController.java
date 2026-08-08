@@ -6,13 +6,14 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import com.chaukz.store.exception.ResourceNotFoundException;
 import com.chaukz.store.model.User;
 import com.chaukz.store.repository.UserRepository;
 import com.chaukz.store.service.JwtService;
-
+import org.springframework.security.core.context.SecurityContextHolder;
 @RestController
 public class AuthController {
 

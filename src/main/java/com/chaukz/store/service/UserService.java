@@ -12,6 +12,8 @@ import com.chaukz.store.repository.CartRepository;
 import com.chaukz.store.model.Cart;
 import java.util.List;
 import java.time.LocalDateTime;
+import com.chaukz.store.exception.DuplicateResourceException;
+
 
 
 @Service
@@ -56,6 +58,9 @@ public class UserService {
     }
 
     public UserResponse create(UserRequest request) {
+        if (UserRepository.existsByEmail(request.email())) {
+            throw new DuplicateResourceException("Email already registered: " + request.email());
+        }
         User user = UserMapper.toEntity(request);
         user.setPassword(passwordEncoder.encode(request.password()));
         User saved = UserRepository.save(user);
