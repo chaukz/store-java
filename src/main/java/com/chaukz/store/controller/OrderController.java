@@ -19,16 +19,15 @@ public class OrderController {
         this.orderService = orderService;
     }
 
-    @PostMapping("/api/users/{userId}/checkout")
-    public ResponseEntity<OrderResponse> checkout(@PathVariable Long userId,
-                                                  @Valid @RequestBody CheckoutRequest request) {
-        OrderResponse created = orderService.checkout(userId, request);
+    @PostMapping("/api/checkout")
+    public ResponseEntity<OrderResponse> checkout(@Valid @RequestBody CheckoutRequest request) {
+        OrderResponse created = orderService.checkout(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @GetMapping("/api/users/{userId}/orders")
-    public List<OrderResponse> getOrdersForUser(@PathVariable Long userId) {
-        return orderService.getOrdersForUser(userId);
+    @GetMapping("/api/orders")
+    public List<OrderResponse> getMyOrders() {
+        return orderService.getMyOrders();
     }
 
     @GetMapping("/api/orders/{orderId}")

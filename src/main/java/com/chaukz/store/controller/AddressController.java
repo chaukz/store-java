@@ -19,23 +19,20 @@ public class AddressController {
         this.addressService = addressService;
     }
 
-    @GetMapping("/api/users/{userId}/addresses")
-    public List<AddressResponse> getByUserId(@PathVariable Long userId) {
-        return addressService.getByUserId(userId);
+    @GetMapping("/api/addresses")
+    public List<AddressResponse> getMyAddresses() {
+        return addressService.getMyAddresses();
     }
 
-    @PostMapping("/api/users/{userId}/addresses")
-    public ResponseEntity<AddressResponse> create(
-            @PathVariable Long userId,
-            @Valid @RequestBody AddressRequest request) {
-        AddressResponse created = addressService.create(userId, request);
+    @PostMapping("/api/addresses")
+    public ResponseEntity<AddressResponse> create(@Valid @RequestBody AddressRequest request) {
+        AddressResponse created = addressService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/api/addresses/{addressId}")
-    public AddressResponse update(
-            @PathVariable Long addressId,
-            @Valid @RequestBody AddressRequest request) {
+    public AddressResponse update(@PathVariable Long addressId,
+                                  @Valid @RequestBody AddressRequest request) {
         return addressService.update(addressId, request);
     }
 

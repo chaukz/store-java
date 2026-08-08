@@ -23,7 +23,6 @@ import com.chaukz.store.repository.OrderItemRepository;
 import com.chaukz.store.repository.OrderRepository;
 import com.chaukz.store.repository.PaymentRepository;
 import com.chaukz.store.repository.ProductVariantRepository;
-import com.chaukz.store.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,8 +41,8 @@ public class OrderService {
     private final CartItemRepository cartItemRepository;
     private final ProductVariantRepository productVariantRepository;
     private final AddressRepository addressRepository;
-    private final UserRepository userRepository;
     private final OrderMapper orderMapper;
+    private final CurrentUserService currentUserService;
 
     public OrderService(OrderRepository orderRepository,
                         OrderItemRepository orderItemRepository,
@@ -52,8 +51,8 @@ public class OrderService {
                         CartItemRepository cartItemRepository,
                         ProductVariantRepository productVariantRepository,
                         AddressRepository addressRepository,
-                        UserRepository userRepository,
-                        OrderMapper orderMapper) {
+                        OrderMapper orderMapper,
+                        CurrentUserService currentUserService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.paymentRepository = paymentRepository;
@@ -61,18 +60,13 @@ public class OrderService {
         this.cartItemRepository = cartItemRepository;
         this.productVariantRepository = productVariantRepository;
         this.addressRepository = addressRepository;
-        this.userRepository = userRepository;
         this.orderMapper = orderMapper;
+        this.currentUserService = currentUserService;
     }
 
-    /**
-     * Turns a cart into an order. Every write below happens in one transaction:
-     * if any step throws, none of it is persisted.
-     */
     @Transactional
-    public OrderResponse checkout(Long userId, CheckoutRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+    public OrderResponse checkout(CheckoutRequest request) {
+        User user = currentUserService.getCurrentUser();
 
         Address address = addressRepository.findById(request.addressId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -80,16 +74,14 @@ public class OrderService {
 
         assertAddressBelongsToUser(address, user);
 
-        Cart cart = cartRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cart not found for user id: " + userId));
+        Cart cart = cartRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cart not found for current user"));
 
         List<CartItem> cartItems = cartItemRepository.findByCartId(cart.getId());
         if (cartItems.isEmpty()) {
             throw new InvalidOrderStatusException("Cannot checkout with an empty cart");
         }
 
-        // Re-check stock. The cart validated it when items were added, but that
-        // may have been days ago and someone else may have bought the last one.
         for (CartItem cartItem : cartItems) {
             ProductVariant variant = cartItem.getProductVariant();
             int available = variant.getStockQuantity() != null ? variant.getStockQuantity() : 0;
@@ -116,9 +108,6 @@ public class OrderService {
         for (CartItem cartItem : cartItems) {
             ProductVariant variant = cartItem.getProductVariant();
             int quantity = cartItem.getQuantity();
-
-            // Snapshot the price. From here on this line never changes,
-            // even if the variant is repriced tomorrow.
             BigDecimal unitPrice = variant.getPrice() != null ? variant.getPrice() : BigDecimal.ZERO;
 
             OrderItem orderItem = new OrderItem();
@@ -149,15 +138,20 @@ public class OrderService {
         return orderMapper.toResponse(savedOrder, orderItems, savedPayment);
     }
 
-    public List<OrderResponse> getOrdersForUser(Long userId) {
+    public List<OrderResponse> getMyOrders() {
+        Long userId = currentUserService.getCurrentUserId();
         return orderRepository.findByUserId(userId)
                 .stream()
                 .map(this::buildResponse)
                 .toList();
     }
 
+    /**
+     * Any logged-in user can request any order id - the ownership check is
+     * what stops that from leaking someone else's order. Admins bypass it.
+     */
     public OrderResponse getById(Long orderId) {
-        Order order = findOrderOrThrow(orderId);
+        Order order = findOrderOwnedByCurrentUserOrAdmin(orderId);
         return buildResponse(order);
     }
 
@@ -168,13 +162,9 @@ public class OrderService {
                 .toList();
     }
 
-    /**
-     * Cancelling puts the reserved stock back. Only allowed before the order
-     * has shipped — once it is out the door, stock is genuinely gone.
-     */
     @Transactional
     public OrderResponse cancel(Long orderId) {
-        Order order = findOrderOrThrow(orderId);
+        Order order = findOrderOwnedByCurrentUserOrAdmin(orderId);
 
         if (order.getOrderStatus() == OrderStatus.CANCELLED) {
             throw new InvalidOrderStatusException("Order " + orderId + " is already cancelled");
@@ -220,9 +210,19 @@ public class OrderService {
         return orderMapper.toResponse(order, items, payment);
     }
 
-    private Order findOrderOrThrow(Long orderId) {
-        return orderRepository.findById(orderId)
+    private Order findOrderOwnedByCurrentUserOrAdmin(Long orderId) {
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        boolean isOwner = order.getUser() != null
+                && order.getUser().getId() != null
+                && order.getUser().getId().equals(currentUserService.getCurrentUserId());
+
+        if (!isOwner && !currentUserService.isAdmin()) {
+            throw new ResourceNotFoundException("Order not found with id: " + orderId);
+        }
+
+        return order;
     }
 
     private void assertAddressBelongsToUser(Address address, User user) {
@@ -231,8 +231,7 @@ public class OrderService {
                 && address.getUser().getId().equals(user.getId());
 
         if (!belongs) {
-            throw new ResourceNotFoundException(
-                    "Address not found with id: " + address.getId());
+            throw new ResourceNotFoundException("Address not found with id: " + address.getId());
         }
     }
 }

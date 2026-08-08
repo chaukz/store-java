@@ -1,12 +1,27 @@
 @host = http://localhost:8081
 
 ### ============================================================
-### SETUP - run these 5 first, in order. Ids are captured for everything below.
-### Re-run this whole block any time you restart IntelliJ or run CLEANUP.
+### SETUP - run top to bottom. Two identities get created:
+### an ADMIN token (from the seeded account) and a CUSTOMER token
+### (a fresh user you create). Everything below depends on these.
 ### ============================================================
 
-### 1. Create Category
+### 1. Login as the seeded admin
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@store.com",
+  "password": "admin123"
+}
+
+> {%
+    client.global.set("adminToken", response.body.token);
+%}
+
+### 2. Create Category (admin)
 POST {{host}}/api/admin/categories
+Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
@@ -18,8 +33,9 @@ Content-Type: application/json
     client.global.set("categoryId", response.body.id);
 %}
 
-### 2. Create Product
+### 3. Create Product (admin)
 POST {{host}}/api/admin/products
+Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
@@ -36,8 +52,9 @@ Content-Type: application/json
     client.global.set("productId", response.body.id);
 %}
 
-### 3. Create Variant (stock = 20)
+### 4. Create Variant (admin) - stock = 20
 POST {{host}}/api/admin/products/{{productId}}/variants
+Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
@@ -51,26 +68,37 @@ Content-Type: application/json
     client.global.set("variantId", response.body.id);
 %}
 
-### 4. Create User (also creates their cart)
+### 5. Create a customer account (admin creates it)
 POST {{host}}/api/admin/users
+Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-  "firstName": "Boni",
+  "firstName": "Thabo",
   "lastName": "Chauke",
-  "email": "test@example.com",
-  "password": "test123",
+  "email": "thabo@example.com",
+  "password": "changeme123",
   "phone": "0821234567",
   "dob": "2000-05-14",
   "role": "CUSTOMER"
 }
 
+### 6. Login as that customer
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "thabo@example.com",
+  "password": "changeme123"
+}
+
 > {%
-    client.global.set("userId", response.body.id);
+    client.global.set("customerToken", response.body.token);
 %}
 
-### 5. Create Address
-POST {{host}}/api/users/{{userId}}/addresses
+### 7. Customer creates their own address (no userId in the URL - it's their token)
+POST {{host}}/api/addresses
+Authorization: Bearer {{customerToken}}
 Content-Type: application/json
 
 {
@@ -85,19 +113,54 @@ Content-Type: application/json
     client.global.set("addressId", response.body.id);
 %}
 
+### 8. A second customer - used later to prove ownership is enforced
+POST {{host}}/api/admin/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "firstName": "Nomsa",
+  "lastName": "Dlamini",
+  "email": "nomsa@example.com",
+  "password": "differentpass1",
+  "phone": "0839876543",
+  "dob": "1998-03-02",
+  "role": "CUSTOMER"
+}
+
+### 9. Login as the second customer
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "nomsa@example.com",
+  "password": "differentpass1"
+}
+
+> {%
+    client.global.set("otherCustomerToken", response.body.token);
+%}
+
 
 ### ============================================================
-### CATEGORY
+### CATEGORY / PRODUCT / VARIANT - public reads, admin writes
 ### ============================================================
 
-### List Categories
+### List Categories - public, no token needed
 GET {{host}}/api/categories
 
-### Get Category by id
-GET {{host}}/api/categories/{{categoryId}}
+### List Products - public
+GET {{host}}/api/products
 
-### Update Category
+### Filter Products by category - public
+GET {{host}}/api/products?categoryId={{categoryId}}
+
+### List Variants - public
+GET {{host}}/api/products/{{productId}}/variants
+
+### Update Category - admin only
 PUT {{host}}/api/admin/categories/{{categoryId}}
+Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
@@ -105,111 +168,37 @@ Content-Type: application/json
   "description": "Footwear for everyone"
 }
 
-
-### ============================================================
-### PRODUCT
-### ============================================================
-
-### List Products
-GET {{host}}/api/products
-
-### Filter Products by category
-GET {{host}}/api/products?categoryId={{categoryId}}
-
-### Search Products by name
-GET {{host}}/api/products/search?query=sneaker
-
-### Get Product by id
-GET {{host}}/api/products/{{productId}}
-
-### Update Product
-PUT {{host}}/api/admin/products/{{productId}}
+### Update Category with NO token - expect 401
+PUT {{host}}/api/admin/categories/{{categoryId}}
 Content-Type: application/json
 
 {
-  "categoryId": {{categoryId}},
-  "name": "Running Sneaker Pro",
-  "description": "Updated lightweight daily trainer",
-  "sku": "RUN-001",
-  "brand": "Nova",
-  "price": 949.99,
-  "stockQuantity": 40
+  "name": "Should fail",
+  "description": "No auth header sent"
+}
+
+### Update Category with a CUSTOMER token - expect 403, not 401
+PUT {{host}}/api/admin/categories/{{categoryId}}
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "name": "Should also fail",
+  "description": "Valid login, wrong role"
 }
 
 
 ### ============================================================
-### PRODUCT VARIANT
+### CART - customer-owned, no userId in the URL
 ### ============================================================
 
-### List Variants for a Product
-GET {{host}}/api/products/{{productId}}/variants
-
-### Update Variant
-PUT {{host}}/api/admin/variants/{{variantId}}
-Content-Type: application/json
-
-{
-  "size": "US 9",
-  "color": "Midnight Black",
-  "price": 849.99,
-  "stockQuantity": 20
-}
-
-
-### ============================================================
-### USER
-### ============================================================
-
-### List Users
-GET {{host}}/api/users
-
-### Get User by id  (check: response must NOT contain a password field)
-GET {{host}}/api/users/{{userId}}
-
-### Update User
-PUT {{host}}/api/users/{{userId}}
-Content-Type: application/json
-
-{
-  "firstName": "Thabo",
-  "lastName": "Chauke",
-  "email": "thabo@example.com",
-  "password": "changeme123",
-  "phone": "0821234567",
-  "dob": "2000-05-14",
-  "role": "CUSTOMER"
-}
-
-
-### ============================================================
-### ADDRESS
-### ============================================================
-
-### List Addresses for a User
-GET {{host}}/api/users/{{userId}}/addresses
-
-### Update Address
-PUT {{host}}/api/addresses/{{addressId}}
-Content-Type: application/json
-
-{
-  "street": "14 Baobab Ave",
-  "city": "Mbombela",
-  "province": "Mpumalanga",
-  "postalCode": "1200",
-  "country": "South Africa"
-}
-
-
-### ============================================================
-### CART - run in order, this sequence proves the business rules
-### ============================================================
-
-### Empty cart (should exist already, created at registration)
-GET {{host}}/api/users/{{userId}}/cart
+### Empty cart (created automatically at registration)
+GET {{host}}/api/cart
+Authorization: Bearer {{customerToken}}
 
 ### Add 2 to cart
-POST {{host}}/api/users/{{userId}}/cart/items
+POST {{host}}/api/cart/items
+Authorization: Bearer {{customerToken}}
 Content-Type: application/json
 
 {
@@ -221,9 +210,9 @@ Content-Type: application/json
     client.global.set("cartItemId", response.body.items[0].id);
 %}
 
-### Add 3 MORE of the same variant
-### PROOF: quantity must become 5 in ONE item, not two separate rows
-POST {{host}}/api/users/{{userId}}/cart/items
+### Add 3 MORE of the same variant - proof: becomes 5 in ONE item
+POST {{host}}/api/cart/items
+Authorization: Bearer {{customerToken}}
 Content-Type: application/json
 
 {
@@ -231,43 +220,33 @@ Content-Type: application/json
   "quantity": 3
 }
 
-### View cart - expect itemCount 5, one item, total = 5 x unitPrice
-GET {{host}}/api/users/{{userId}}/cart
+### View cart - expect itemCount 5, one item
+GET {{host}}/api/cart
+Authorization: Bearer {{customerToken}}
 
-### Update item quantity - ABSOLUTE set, not additive (5 -> 4)
-PUT {{host}}/api/users/{{userId}}/cart/items/{{cartItemId}}
+### Cart with NO token - expect 401
+GET {{host}}/api/cart
+
+### Update item quantity - absolute set (5 -> 3, leaving stock for checkout)
+PUT {{host}}/api/cart/items/{{cartItemId}}
+Authorization: Bearer {{customerToken}}
 Content-Type: application/json
 
 {
-  "quantity": 4
+  "quantity": 3
 }
 
-### Remove the item
-DELETE {{host}}/api/users/{{userId}}/cart/items/{{cartItemId}}
-
-### Clear cart (empties it, keeps the cart row)
-DELETE {{host}}/api/users/{{userId}}/cart
-
 
 ### ============================================================
-### CHECKOUT - run this whole block in order.
-### The three stock checks are the real test.
+### CHECKOUT / ORDERS - customer-owned, no userId in the URL
 ### ============================================================
 
-### C1. Stock BEFORE checkout - note the number
+### Stock BEFORE checkout - note the number
 GET {{host}}/api/products/{{productId}}/variants
 
-### C2. Add 3 to cart
-POST {{host}}/api/users/{{userId}}/cart/items
-Content-Type: application/json
-
-{
-  "productVariantId": {{variantId}},
-  "quantity": 3
-}
-
-### C3. Checkout - expect 201, status PENDING, paymentStatus PENDING
-POST {{host}}/api/users/{{userId}}/checkout
+### Checkout
+POST {{host}}/api/checkout
+Authorization: Bearer {{customerToken}}
 Content-Type: application/json
 
 {
@@ -279,33 +258,95 @@ Content-Type: application/json
     client.global.set("orderId", response.body.id);
 %}
 
-### C4. Cart must now be EMPTY (items [], total 0)
-GET {{host}}/api/users/{{userId}}/cart
+### Cart must now be EMPTY
+GET {{host}}/api/cart
+Authorization: Bearer {{customerToken}}
 
-### C5. Stock must be DOWN by 3 vs C1
+### Stock must be DOWN by 3
 GET {{host}}/api/products/{{productId}}/variants
 
-### C6. Order history for this user
-GET {{host}}/api/users/{{userId}}/orders
+### My order history
+GET {{host}}/api/orders
+Authorization: Bearer {{customerToken}}
 
-### C7. Get the order by id
+### Get the order by id - as its owner
 GET {{host}}/api/orders/{{orderId}}
+Authorization: Bearer {{customerToken}}
 
-### C8. Admin - all orders
-GET {{host}}/api/admin/orders
+### PROOF: the SECOND customer tries the same order id - expect 404, not the order
+GET {{host}}/api/orders/{{orderId}}
+Authorization: Bearer {{otherCustomerToken}}
 
-### C9. Cancel the order
+### PROOF: the second customer tries to cancel it - expect 404
 POST {{host}}/api/orders/{{orderId}}/cancel
+Authorization: Bearer {{otherCustomerToken}}
 
-### C10. Stock must be BACK UP by 3 vs C5
+### Admin CAN see it via the admin endpoint, regardless of ownership
+GET {{host}}/api/admin/orders
+Authorization: Bearer {{adminToken}}
+
+### Owner cancels their own order - expect 200
+POST {{host}}/api/orders/{{orderId}}/cancel
+Authorization: Bearer {{customerToken}}
+
+### Stock must be BACK UP by 3
 GET {{host}}/api/products/{{productId}}/variants
 
-### C11. Cancel again - expect 400, already cancelled
+### Cancel again - expect 400, already cancelled
 POST {{host}}/api/orders/{{orderId}}/cancel
+Authorization: Bearer {{customerToken}}
 
 
 ### ============================================================
-### ERROR CASES
+### ADDRESSES - customer-owned, ownership now enforced
+### ============================================================
+
+### My addresses
+GET {{host}}/api/addresses
+Authorization: Bearer {{customerToken}}
+
+### Update my own address - expect 200
+PUT {{host}}/api/addresses/{{addressId}}
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "street": "14 Baobab Ave",
+  "city": "Mbombela",
+  "province": "Mpumalanga",
+  "postalCode": "1200",
+  "country": "South Africa"
+}
+
+### PROOF: second customer tries to update the FIRST customer's address - expect 404
+PUT {{host}}/api/addresses/{{addressId}}
+Authorization: Bearer {{otherCustomerToken}}
+Content-Type: application/json
+
+{
+  "street": "Hacked St",
+  "city": "Nowhere",
+  "province": "N/A",
+  "postalCode": "0000",
+  "country": "N/A"
+}
+
+
+### ============================================================
+### PAYMENTS - admin only
+### ============================================================
+
+### Get payment for an order
+GET {{host}}/api/orders/{{orderId}}/payment
+Authorization: Bearer {{customerToken}}
+
+### List all payments - admin only
+GET {{host}}/api/admin/payments
+Authorization: Bearer {{adminToken}}
+
+
+### ============================================================
+### ERROR CASES - validation and not-found, still work as before
 ### ============================================================
 
 ### 404 - category that doesn't exist
@@ -314,190 +355,44 @@ GET {{host}}/api/categories/999999
 ### 404 - product that doesn't exist
 GET {{host}}/api/products/999999
 
-### 404 - user that doesn't exist
-GET {{host}}/api/users/999999
-
-### 404 - order that doesn't exist
-GET {{host}}/api/orders/999999
-
-### 404 - bad category id on product create
-POST {{host}}/api/admin/products
-Content-Type: application/json
-
-{
-  "categoryId": 999999,
-  "name": "Ghost Product",
-  "price": 10.00,
-  "stockQuantity": 5
-}
-
-### 404 - bad product id on variant create
-POST {{host}}/api/admin/products/999999/variants
-Content-Type: application/json
-
-{
-  "size": "US 9",
-  "color": "Black",
-  "price": 899.99,
-  "stockQuantity": 20
-}
-
-### 404 - bad user id on address create
-POST {{host}}/api/users/999999/addresses
-Content-Type: application/json
-
-{
-  "street": "Ghost St",
-  "city": "Nowhere",
-  "province": "N/A",
-  "postalCode": "0000",
-  "country": "N/A"
-}
-
-### 404 - bad variant id on add to cart
-POST {{host}}/api/users/{{userId}}/cart/items
-Content-Type: application/json
-
-{
-  "productVariantId": 999999,
-  "quantity": 1
-}
-
-### 400 - checkout with an empty cart
-POST {{host}}/api/users/{{userId}}/checkout
-Content-Type: application/json
-
-{
-  "addressId": {{addressId}},
-  "paymentMethod": "CARD"
-}
-
-### 400 - insufficient stock
-POST {{host}}/api/users/{{userId}}/cart/items
-Content-Type: application/json
-
-{
-  "productVariantId": {{variantId}},
-  "quantity": 9999
-}
-
 ### 400 - validation, missing category name
 POST {{host}}/api/admin/categories
+Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "description": "no name here"
 }
 
-### 400 - validation, missing product name
-POST {{host}}/api/admin/products
-Content-Type: application/json
-
-{
-  "categoryId": {{categoryId}},
-  "price": 10.00,
-  "stockQuantity": 5
-}
-
-### 400 - validation, missing user first name
+### 409 - duplicate email
 POST {{host}}/api/admin/users
+Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
+  "firstName": "Thabo",
   "lastName": "Chauke",
   "email": "thabo@example.com",
-  "password": "changeme123"
-}
-
-### 400 - validation, zero quantity on add to cart
-POST {{host}}/api/users/{{userId}}/cart/items
-Content-Type: application/json
-
-{
-  "productVariantId": {{variantId}},
-  "quantity": 0
-}
-
-### 400 - invalid payment method
-POST {{host}}/api/users/{{userId}}/checkout
-Content-Type: application/json
-
-{
-  "addressId": {{addressId}},
-  "paymentMethod": "BITCOIN"
+  "password": "irrelevant",
+  "phone": "0000000000",
+  "dob": "2000-01-01",
+  "role": "CUSTOMER"
 }
 
 
 ### ============================================================
-### CLEANUP - DESTRUCTIVE. Everything above stops working after this.
-### Only run when you want a clean database. Re-run SETUP afterwards.
+### CLEANUP - DESTRUCTIVE. Run last, only when starting fresh.
+### After this, re-run SETUP from the top.
 ### ============================================================
-
-### Delete Address
-DELETE {{host}}/api/addresses/{{addressId}}
-
-### Delete User
-DELETE {{host}}/api/admin/users/{{userId}}
 
 ### Delete Variant
 DELETE {{host}}/api/admin/variants/{{variantId}}
+Authorization: Bearer {{adminToken}}
 
 ### Delete Product
 DELETE {{host}}/api/admin/products/{{productId}}
+Authorization: Bearer {{adminToken}}
 
 ### Delete Category
 DELETE {{host}}/api/admin/categories/{{categoryId}}
-
-### Correct login - expect 200, real token
-POST {{host}}/api/auth/login
-Content-Type: application/json
-
-{ "email": "thabo@example.com", "password": "changeme123" }
-
-### Wrong password - expect 401
-POST {{host}}/api/auth/login
-Content-Type: application/json
-
-{ "email": "thabo@example.com", "password": "wrongpassword" }
-### No token
-GET {{host}}/api/whoami
-
-### Login
-POST {{host}}/api/auth/login
-Content-Type: application/json
-
-{ "email": "test@example.com", "password": "test123" }
-
-> {% client.global.set("jwtToken", response.body.token); %}
-
-### With token
-GET {{host}}/api/whoami
-Authorization: Bearer {{jwtToken}}
-
-### First create - expect 201
-POST {{host}}/api/admin/users
-Content-Type: application/json
-
-{
-  "firstName": "Boni",
-  "lastName": "Chauke",
-  "email": "boni@example.com",
-  "password": "changeme123",
-  "phone": "0821234567",
-  "dob": "2000-05-14",
-  "role": "CUSTOMER"
-}
-
-### Second create, same email - expect 409
-POST {{host}}/api/admin/users
-Content-Type: application/json
-
-{
-  "firstName": "Boni",
-  "lastName": "Chauke",
-  "email": "boni@example.com",
-  "password": "changeme123",
-  "phone": "0821234567",
-  "dob": "2000-05-14",
-  "role": "CUSTOMER"
-}
+Authorization: Bearer {{adminToken}}
