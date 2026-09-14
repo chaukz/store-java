@@ -28,4 +28,11 @@ public class ProductVariant {
     private BigDecimal price;
 
     private Integer stockQuantity;
+
+    // Optimistic locking. Hibernate manages this column itself - never
+    // set it manually. See V2__add_optimistic_locking_to_product_variants.sql
+    // for why it's here.
+    @Version
+    private Long version;
+
 }

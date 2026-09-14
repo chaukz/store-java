@@ -65,4 +65,12 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(ErrorResponse.of("Invalid email or password", HttpStatus.UNAUTHORIZED.value()));
     }
+    @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleStockConflict(org.springframework.dao.OptimisticLockingFailureException ex) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(
+                        "This item's stock changed while your order was processing. Please try checking out again.",
+                        HttpStatus.CONFLICT.value()));
+    }
 }
