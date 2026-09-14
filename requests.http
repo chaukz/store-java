@@ -68,9 +68,10 @@ Content-Type: application/json
     client.global.set("variantId", response.body.id);
 %}
 
-### 5. Create a customer account (admin creates it)
-POST {{host}}/api/admin/users
-Authorization: Bearer {{adminToken}}
+### 5. Create a customer account via public self-registration
+### (this is the normal signup path - no admin token needed, and there
+### is no `role` field to send: registration always produces CUSTOMER)
+POST {{host}}/api/auth/register
 Content-Type: application/json
 
 {
@@ -79,11 +80,16 @@ Content-Type: application/json
   "email": "thabo@example.com",
   "password": "changeme123",
   "phone": "0821234567",
-  "dob": "2000-05-14",
-  "role": "CUSTOMER"
+  "dob": "2000-05-14"
 }
 
-### 6. Login as that customer
+> {%
+    // register logs you in immediately, so this token is usable right away
+    client.global.set("customerToken", response.body.token);
+%}
+
+### 6. (Optional) Login again as that customer - proves login also works,
+### not just the auto-login from registration above
 POST {{host}}/api/auth/login
 Content-Type: application/json
 
@@ -91,10 +97,6 @@ Content-Type: application/json
   "email": "thabo@example.com",
   "password": "changeme123"
 }
-
-> {%
-    client.global.set("customerToken", response.body.token);
-%}
 
 ### 7. Customer creates their own address (no userId in the URL - it's their token)
 POST {{host}}/api/addresses
@@ -114,8 +116,7 @@ Content-Type: application/json
 %}
 
 ### 8. A second customer - used later to prove ownership is enforced
-POST {{host}}/api/admin/users
-Authorization: Bearer {{adminToken}}
+POST {{host}}/api/auth/register
 Content-Type: application/json
 
 {
@@ -124,22 +125,32 @@ Content-Type: application/json
   "email": "nomsa@example.com",
   "password": "differentpass1",
   "phone": "0839876543",
-  "dob": "1998-03-02",
-  "role": "CUSTOMER"
-}
-
-### 9. Login as the second customer
-POST {{host}}/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "nomsa@example.com",
-  "password": "differentpass1"
+  "dob": "1998-03-02"
 }
 
 > {%
     client.global.set("otherCustomerToken", response.body.token);
 %}
+
+### 9. Phase 1 regression check: this customer must NOT be able to list
+### every user in the system - expect 403
+GET {{host}}/api/admin/users
+Authorization: Bearer {{otherCustomerToken}}
+
+### 9b. ...and must NOT be able to grant themselves admin by editing their
+### own profile - UserRequest has no role field, so this body can't do it
+### even if you try. Expect 200 with role still CUSTOMER.
+PUT {{host}}/api/users/me
+Authorization: Bearer {{otherCustomerToken}}
+Content-Type: application/json
+
+{
+  "firstName": "Nomsa",
+  "lastName": "Dlamini",
+  "phone": "0839876543",
+  "dob": "1998-03-02",
+  "role": "ADMIN"
+}
 
 
 ### ============================================================

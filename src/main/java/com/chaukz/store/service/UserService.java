@@ -1,92 +1,137 @@
 package com.chaukz.store.service;
 
+import com.chaukz.store.dto.request.AdminUserRequest;
+import com.chaukz.store.dto.request.RegisterRequest;
 import com.chaukz.store.dto.request.UserRequest;
 import com.chaukz.store.dto.response.UserResponse;
+import com.chaukz.store.exception.DuplicateResourceException;
 import com.chaukz.store.exception.ResourceNotFoundException;
 import com.chaukz.store.mapper.UserMapper;
+import com.chaukz.store.model.Cart;
 import com.chaukz.store.model.User;
+import com.chaukz.store.repository.CartRepository;
 import com.chaukz.store.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.chaukz.store.repository.CartRepository;
-import com.chaukz.store.model.Cart;
-import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
-import com.chaukz.store.exception.DuplicateResourceException;
-
-
+import java.util.List;
 
 @Service
 public class UserService {
 
-    private final UserRepository UserRepository;
-    private final UserMapper UserMapper;
-    private final CartRepository CartRepository;
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
+    private final CartRepository cartRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository UserRepository, UserMapper UserMapper,PasswordEncoder passwordEncoder, CartRepository CartRepository) {
-        this.UserRepository = UserRepository;
-        this.UserMapper = UserMapper;
+    public UserService(UserRepository userRepository,
+                       UserMapper userMapper,
+                       PasswordEncoder passwordEncoder,
+                       CartRepository cartRepository) {
+        this.userRepository = userRepository;
+        this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
-        this.CartRepository = CartRepository;
+        this.cartRepository = cartRepository;
     }
 
-    public List<UserResponse> getAll() {
-        return UserRepository.findAll()
-                .stream()
-                .map(UserMapper::toResponse)
-                .toList();
-    }
+    // ----- self-service -----
 
-    public List<UserResponse> getByUserId(Long UserId) {
-        return UserRepository.findById(UserId)
-                .stream()
-                .map(UserMapper::toResponse)
-                .toList();
-    }
+    /**
+     * Public registration. Always produces a ROLE_CUSTOMER account - role is
+     * set inside UserMapper.toEntity(RegisterRequest), never taken from
+     * the request, so there's no field for a caller to smuggle a
+     * privilege escalation through.
+     */
+    @Transactional
+    public User register(RegisterRequest request) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw new DuplicateResourceException("Email already registered: " + request.email());
+        }
 
-    public List<UserResponse> search(String query) {
-        return UserRepository.findByEmail(query)
-                .stream()
-                .map(UserMapper::toResponse)
-                .toList();
+        User user = userMapper.toEntity(request);
+        user.setPassword(passwordEncoder.encode(request.password()));
+        User saved = userRepository.save(user);
+
+        Cart cart = new Cart();
+        cart.setUser(saved);
+        cart.setCreatedAt(LocalDateTime.now());
+        cartRepository.save(cart);
+
+        return saved;
     }
 
     public UserResponse getById(Long id) {
         User user = findUserOrThrow(id);
-        return UserMapper.toResponse(user);
+        return userMapper.toResponse(user);
     }
 
-    public UserResponse create(UserRequest request) {
-        if (UserRepository.existsByEmail(request.email())) {
+    /**
+     * Self-service profile update. The id comes from the authenticated
+     * caller (CurrentUserService), never from a path parameter, so this
+     * can only ever touch the caller's own row. Role and email are not
+     * on UserRequest at all, so there's nothing here to escalate.
+     */
+    public UserResponse updateOwnProfile(Long currentUserId, UserRequest request) {
+        User user = findUserOrThrow(currentUserId);
+        userMapper.updateEntity(user, request);
+        if (request.password() != null && !request.password().isBlank()) {
+            user.setPassword(passwordEncoder.encode(request.password()));
+        }
+        User saved = userRepository.save(user);
+        return userMapper.toResponse(saved);
+    }
+
+    // ----- admin -----
+
+    public List<UserResponse> getAll() {
+        return userRepository.findAll()
+                .stream()
+                .map(userMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional
+    public UserResponse adminCreate(AdminUserRequest request) {
+        if (userRepository.existsByEmail(request.email())) {
             throw new DuplicateResourceException("Email already registered: " + request.email());
         }
-        User user = UserMapper.toEntity(request);
+        if (request.password() == null || request.password().isBlank()) {
+            throw new IllegalArgumentException("Password is required when creating a user");
+        }
+
+        User user = userMapper.toEntity(request);
         user.setPassword(passwordEncoder.encode(request.password()));
-        User saved = UserRepository.save(user);
+        User saved = userRepository.save(user);
+
         Cart cart = new Cart();
         cart.setUser(saved);
         cart.setCreatedAt(LocalDateTime.now());
-        CartRepository.save(cart);
+        cartRepository.save(cart);
 
-        return UserMapper.toResponse(saved);
+        return userMapper.toResponse(saved);
     }
 
-    public UserResponse update(Long id, UserRequest request) {
+    public UserResponse adminUpdate(Long id, AdminUserRequest request) {
         User user = findUserOrThrow(id);
-        UserMapper.updateEntity(user, request);
-        user.setPassword(passwordEncoder.encode(request.password()));
-        User saved = UserRepository.save(user);
-        return UserMapper.toResponse(saved);
+        userMapper.updateEntity(user, request);
+        if (request.password() != null && !request.password().isBlank()) {
+            user.setPassword(passwordEncoder.encode(request.password()));
+        }
+        User saved = userRepository.save(user);
+        return userMapper.toResponse(saved);
     }
 
     public void delete(Long id) {
         User user = findUserOrThrow(id);
-        UserRepository.delete(user);
+        userRepository.delete(user);
     }
 
+    // ----- helpers -----
+
     private User findUserOrThrow(Long id) {
-        return UserRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
     }
 }
