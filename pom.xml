@@ -60,6 +60,23 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Flyway: versioned SQL migrations instead of Hibernate ddl-auto.
+     flyway-database-postgresql is required as of Flyway 10+ - the
+     core artifact alone no longer knows how to talk to Postgres
+     specifically, database support was split into its own module. -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
 		<!-- Validation -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
