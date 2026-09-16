@@ -213,11 +213,6 @@ The app starts on `http://localhost:8081`. Swagger UI is available at `http://lo
 
 Service-layer tests use Mockito with mocked repositories. Controller tests use MockMvc. `StockOptimisticLockingTest` verifies that concurrent checkouts for the same variant correctly conflict rather than oversell.
 
-## Frontend
-
-The companion frontend (React + Vite) lives at [store-frontend](../store-frontend).
-CORS is pre-configured to allow `localhost:5173` (Vite default) and `localhost:3000` out of the box.
-
 ## Author
 
 Built by [chaukz](https://github.com/chaukz)
