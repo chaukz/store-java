@@ -90,7 +90,7 @@ class CartServiceTest {
         when(productVariantRepository.findById(20L)).thenReturn(Optional.of(variant));
         when(cartItemRepository.findByCartIdAndProductVariantId(10L, 20L)).thenReturn(Optional.empty());
         when(cartItemRepository.save(any(CartItem.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(cartItemRepository.findByCartId(10L)).thenAnswer(inv -> {
+        when(cartItemRepository.findByCartIdWithVariantAndProduct(10L)).thenAnswer(inv -> {
             CartItem item = new CartItem();
             item.setId(100L);
             item.setCart(cart);
@@ -116,7 +116,7 @@ class CartServiceTest {
         when(productVariantRepository.findById(20L)).thenReturn(Optional.of(variant));
         when(cartItemRepository.findByCartIdAndProductVariantId(10L, 20L)).thenReturn(Optional.of(existing));
         when(cartItemRepository.save(any(CartItem.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(cartItemRepository.findByCartId(10L)).thenReturn(List.of(existing));
+        when(cartItemRepository.findByCartIdWithVariantAndProduct(10L)).thenReturn(List.of(existing));
 
         // Adding 3 more to an existing quantity of 2 must result in ONE
         // item with quantity 5 - not a second row.
@@ -162,7 +162,7 @@ class CartServiceTest {
         item.setCart(cart);
 
         when(cartItemRepository.findById(100L)).thenReturn(Optional.of(item));
-        when(cartItemRepository.findByCartId(10L)).thenReturn(List.of());
+        when(cartItemRepository.findByCartIdWithVariantAndProduct(10L)).thenReturn(List.of());
 
         cartService.removeItem(1L, 100L);
 

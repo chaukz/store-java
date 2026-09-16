@@ -3,9 +3,11 @@ package com.chaukz.store.service;
 import com.chaukz.store.dto.request.CheckoutRequest;
 import com.chaukz.store.dto.response.OrderResponse;
 import com.chaukz.store.dto.response.PageResponse;
+
 import com.chaukz.store.exception.InsufficientStockException;
 import com.chaukz.store.exception.InvalidOrderStatusException;
 import com.chaukz.store.exception.ResourceNotFoundException;
+
 import com.chaukz.store.mapper.OrderMapper;
 import com.chaukz.store.model.Address;
 import com.chaukz.store.model.Cart;
@@ -15,6 +17,7 @@ import com.chaukz.store.model.OrderItem;
 import com.chaukz.store.model.Payment;
 import com.chaukz.store.model.ProductVariant;
 import com.chaukz.store.model.User;
+
 import com.chaukz.store.model.enums.OrderStatus;
 import com.chaukz.store.model.enums.PaymentStatus;
 import com.chaukz.store.repository.AddressRepository;
@@ -24,6 +27,7 @@ import com.chaukz.store.repository.OrderItemRepository;
 import com.chaukz.store.repository.OrderRepository;
 import com.chaukz.store.repository.PaymentRepository;
 import com.chaukz.store.repository.ProductVariantRepository;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,6 +37,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.data.domain.PageImpl;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
@@ -46,6 +54,7 @@ public class OrderService {
     private final AddressRepository addressRepository;
     private final OrderMapper orderMapper;
     private final CurrentUserService currentUserService;
+
 
     public OrderService(OrderRepository orderRepository,
                         OrderItemRepository orderItemRepository,
@@ -143,15 +152,12 @@ public class OrderService {
 
     public List<OrderResponse> getMyOrders() {
         Long userId = currentUserService.getCurrentUserId();
-        return orderRepository.findByUserId(userId)
-                .stream()
-                .map(this::buildResponse)
-                .toList();
+        return buildResponses(orderRepository.findByUserId(userId));
     }
 
     public OrderResponse getById(Long orderId) {
         Order order = findOrderOwnedByCurrentUserOrAdmin(orderId);
-        return buildResponse(order);
+        return buildResponses(List.of(order)).get(0);
     }
 
     /**
@@ -163,7 +169,42 @@ public class OrderService {
                 ? orderRepository.findByOrderStatus(status, pageable)
                 : orderRepository.findAll(pageable);
 
-        return PageResponse.from(orders.map(this::buildResponse));
+        List<OrderResponse> content = buildResponses(orders.getContent());
+        Page<OrderResponse> responsePage = new PageImpl<>(content, pageable, orders.getTotalElements());
+        return PageResponse.from(responsePage);
+    }
+
+    /**
+     * Builds responses for a whole list of orders in a fixed number of
+     * queries, no matter how many orders there are. This is the actual
+     * N+1 fix: instead of asking "give me this order's items" and "give
+     * me this order's payment" once per order, we ask each question
+     * exactly once, with a list of every order id we need, then match
+     * the results back up in memory using the two Maps below.
+     */
+    private List<OrderResponse> buildResponses(List<Order> orders) {
+        if (orders.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> orderIds = orders.stream().map(Order::getId).toList();
+
+        Map<Long, List<OrderItem>> itemsByOrderId = orderItemRepository
+                .findByOrderIdInWithVariantAndProduct(orderIds)
+                .stream()
+                .collect(Collectors.groupingBy(item -> item.getOrder().getId()));
+
+        Map<Long, Payment> paymentByOrderId = paymentRepository
+                .findByOrderIdIn(orderIds)
+                .stream()
+                .collect(Collectors.toMap(payment -> payment.getOrder().getId(), payment -> payment));
+
+        return orders.stream()
+                .map(order -> orderMapper.toResponse(
+                        order,
+                        itemsByOrderId.getOrDefault(order.getId(), List.of()),
+                        paymentByOrderId.get(order.getId())))
+                .toList();
     }
 
     @Transactional
@@ -183,7 +224,7 @@ public class OrderService {
                     "Cannot cancel an order with status " + order.getOrderStatus());
         }
 
-        List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
+        List<OrderItem> items = orderItemRepository.findByOrderIdInWithVariantAndProduct(List.of(orderId));
         for (OrderItem item : items) {
             ProductVariant variant = item.getProductVariant();
             if (variant != null) {

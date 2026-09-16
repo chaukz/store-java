@@ -28,7 +28,7 @@ public class ProductVariantService {
     }
 
     public List<ProductVariantResponse> getByProductId(Long productId) {
-        return productVariantRepository.findByProductId(productId)
+        return productVariantRepository.findByProductIdWithProduct(productId)
                 .stream()
                 .map(productVariantMapper::toResponse)
                 .toList();

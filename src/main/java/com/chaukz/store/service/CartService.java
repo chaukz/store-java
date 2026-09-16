@@ -43,7 +43,7 @@ public class CartService {
 
     public CartResponse getCart(Long userId) {
         Cart cart = findOrCreateCart(userId);
-        List<CartItem> items = cartItemRepository.findByCartId(cart.getId());
+        List<CartItem> items = cartItemRepository.findByCartIdWithVariantAndProduct(cart.getId());
         return cartMapper.toResponse(cart, items);
     }
 

@@ -206,8 +206,8 @@ class OrderServiceTest {
 
         when(orderRepository.findById(500L)).thenReturn(Optional.of(order));
         when(currentUserService.getCurrentUserId()).thenReturn(1L);
-        when(orderItemRepository.findByOrderId(500L)).thenReturn(List.of());
-        when(paymentRepository.findByOrderId(500L)).thenReturn(Optional.empty());
+        when(orderItemRepository.findByOrderIdInWithVariantAndProduct(List.of(500L))).thenReturn(List.of());
+        when(paymentRepository.findByOrderIdIn(List.of(500L))).thenReturn(List.of());
 
         OrderResponse response = orderService.getById(500L);
 
@@ -246,6 +246,7 @@ class OrderServiceTest {
         when(currentUserService.getCurrentUserId()).thenReturn(1L);
         when(orderItemRepository.findByOrderId(500L)).thenReturn(List.of(orderItem));
         when(paymentRepository.findByOrderId(500L)).thenReturn(Optional.of(payment));
+        when(orderItemRepository.findByOrderIdInWithVariantAndProduct(List.of(500L))).thenReturn(List.of(orderItem));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(productVariantRepository.save(any(ProductVariant.class)))
                 .thenAnswer(inv -> inv.getArgument(0));

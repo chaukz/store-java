@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
@@ -42,11 +43,14 @@ class StockOptimisticLockingTest {
     private ProductVariantRepository productVariantRepository;
 
     private Long variantId;
+    private Long productId;
+    private Long categoryId;
 
     private void seedVariantWithStock(int stock) {
         Category category = new Category();
         category.setName("Test category " + System.nanoTime());
         Category savedCategory = categoryRepository.save(category);
+        categoryId = savedCategory.getId();
 
         Product product = new Product();
         product.setCategory(savedCategory);
@@ -54,6 +58,7 @@ class StockOptimisticLockingTest {
         product.setActive(true);
         product.setCreatedAt(java.time.LocalDateTime.now());
         Product savedProduct = productRepository.save(product);
+        productId = savedProduct.getId();
 
         ProductVariant variant = new ProductVariant();
         variant.setProduct(savedProduct);
@@ -68,11 +73,13 @@ class StockOptimisticLockingTest {
     @AfterEach
     void cleanUp() {
         if (variantId != null) {
-            productVariantRepository.findById(variantId).ifPresent(v -> {
-                productVariantRepository.delete(v);
-                productRepository.delete(v.getProduct());
-                categoryRepository.delete(v.getProduct().getCategory());
-            });
+            productVariantRepository.deleteById(variantId);
+        }
+        if (productId != null) {
+            productRepository.deleteById(productId);
+        }
+        if (categoryId != null) {
+            categoryRepository.deleteById(categoryId);
         }
     }
 
