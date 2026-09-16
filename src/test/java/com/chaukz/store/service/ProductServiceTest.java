@@ -20,7 +20,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -59,8 +58,6 @@ class ProductServiceTest {
         product.setId(5L);
         product.setCategory(category);
         product.setName("Running Sneaker");
-        product.setPrice(new BigDecimal("899.99"));
-        product.setStockQuantity(50);
         product.setActive(true);
     }
 
@@ -83,8 +80,7 @@ class ProductServiceTest {
     @Test
     void create_looksUpCategoryAndSaves() {
         ProductRequest request = new ProductRequest(
-                1L, "New Shoe", "desc", "SKU-1", "Nova",
-                new BigDecimal("500.00"), 10, true);
+                1L, "New Shoe", "desc", "SKU-1", "Nova", true);
 
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
         when(productRepository.save(any(Product.class))).thenAnswer(inv -> {
@@ -102,8 +98,7 @@ class ProductServiceTest {
     @Test
     void create_categoryDoesNotExist_throwsResourceNotFound() {
         ProductRequest request = new ProductRequest(
-                999L, "New Shoe", "desc", "SKU-1", "Nova",
-                new BigDecimal("500.00"), 10, true);
+                999L, "New Shoe", "desc", "SKU-1", "Nova", true);
 
         when(categoryRepository.findById(999L)).thenReturn(Optional.empty());
 

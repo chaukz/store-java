@@ -20,8 +20,6 @@ public class OrderMapper {
         ProductVariant variant = item.getProductVariant();
         Product product = variant != null ? variant.getProduct() : null;
 
-        // Price comes from the order item row itself, NOT from the variant.
-        // This is the price as it was at purchase time.
         BigDecimal price = item.getPrice() != null ? item.getPrice() : BigDecimal.ZERO;
         int quantity = item.getQuantity() != null ? item.getQuantity() : 0;
 
@@ -29,7 +27,8 @@ public class OrderMapper {
                 item.getId(),
                 variant != null ? variant.getId() : null,
                 product != null ? product.getId() : null,
-                product != null ? product.getName() : null,
+                item.getProductName(),
+                item.getProductSku(),
                 variant != null ? variant.getSize() : null,
                 variant != null ? variant.getColor() : null,
                 price,

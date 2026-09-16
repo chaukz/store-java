@@ -3,7 +3,6 @@ package com.chaukz.store.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -29,10 +28,6 @@ public class Product {
     private String sku;
 
     private String brand;
-
-    private BigDecimal price;
-
-    private Integer stockQuantity;
 
     private Boolean active;
 

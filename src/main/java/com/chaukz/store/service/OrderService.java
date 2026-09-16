@@ -15,6 +15,7 @@ import com.chaukz.store.model.CartItem;
 import com.chaukz.store.model.Order;
 import com.chaukz.store.model.OrderItem;
 import com.chaukz.store.model.Payment;
+import com.chaukz.store.model.Product;
 import com.chaukz.store.model.ProductVariant;
 import com.chaukz.store.model.User;
 
@@ -127,6 +128,9 @@ public class OrderService {
             orderItem.setProductVariant(variant);
             orderItem.setQuantity(quantity);
             orderItem.setPrice(unitPrice);
+            Product product = variant.getProduct();
+            orderItem.setProductName(product != null ? product.getName() : null);
+            orderItem.setProductSku(product != null ? product.getSku() : null);
             orderItems.add(orderItemRepository.save(orderItem));
 
             total = total.add(unitPrice.multiply(BigDecimal.valueOf(quantity)));
@@ -240,6 +244,9 @@ public class OrderService {
         paymentRepository.findByOrderId(orderId).ifPresent(payment -> {
             if (payment.getPaymentStatus() == PaymentStatus.PENDING) {
                 payment.setPaymentStatus(PaymentStatus.FAILED);
+                paymentRepository.save(payment);
+            } else if (payment.getPaymentStatus() == PaymentStatus.PAID) {
+                payment.setPaymentStatus(PaymentStatus.REFUNDED);
                 paymentRepository.save(payment);
             }
         });

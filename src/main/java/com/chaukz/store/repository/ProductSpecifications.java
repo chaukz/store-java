@@ -1,16 +1,13 @@
 package com.chaukz.store.repository;
 
 import com.chaukz.store.model.Product;
+import com.chaukz.store.model.ProductVariant;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 
-/**
- * Builds a Product query predicate from whichever filters are actually
- * present. Each filter is optional and independent - a request can supply
- * any combination (or none) and only the matching pieces get added to the
- * WHERE clause.
- */
 public class ProductSpecifications {
 
     private ProductSpecifications() {
@@ -22,7 +19,6 @@ public class ProductSpecifications {
                                                        Boolean inStockOnly,
                                                        String nameContains) {
 
-        // Start with "always true" - every subsequent filter narrows this down.
         Specification<Product> spec = (root, query, cb) -> cb.conjunction();
 
         if (categoryId != null) {
@@ -31,18 +27,36 @@ public class ProductSpecifications {
         }
 
         if (minPrice != null) {
-            spec = spec.and((root, query, cb) ->
-                    cb.greaterThanOrEqualTo(root.get("price"), minPrice));
+            spec = spec.and((root, query, cb) -> {
+                Subquery<Long> sub = query.subquery(Long.class);
+                Root<ProductVariant> v = sub.from(ProductVariant.class);
+                sub.select(v.get("id")).where(cb.and(
+                        cb.equal(v.get("product").get("id"), root.get("id")),
+                        cb.greaterThanOrEqualTo(v.get("price"), minPrice)));
+                return cb.exists(sub);
+            });
         }
 
         if (maxPrice != null) {
-            spec = spec.and((root, query, cb) ->
-                    cb.lessThanOrEqualTo(root.get("price"), maxPrice));
+            spec = spec.and((root, query, cb) -> {
+                Subquery<Long> sub = query.subquery(Long.class);
+                Root<ProductVariant> v = sub.from(ProductVariant.class);
+                sub.select(v.get("id")).where(cb.and(
+                        cb.equal(v.get("product").get("id"), root.get("id")),
+                        cb.lessThanOrEqualTo(v.get("price"), maxPrice)));
+                return cb.exists(sub);
+            });
         }
 
         if (Boolean.TRUE.equals(inStockOnly)) {
-            spec = spec.and((root, query, cb) ->
-                    cb.greaterThan(root.get("stockQuantity"), 0));
+            spec = spec.and((root, query, cb) -> {
+                Subquery<Long> sub = query.subquery(Long.class);
+                Root<ProductVariant> v = sub.from(ProductVariant.class);
+                sub.select(v.get("id")).where(cb.and(
+                        cb.equal(v.get("product").get("id"), root.get("id")),
+                        cb.greaterThan(v.get("stockQuantity"), 0)));
+                return cb.exists(sub);
+            });
         }
 
         if (nameContains != null && !nameContains.isBlank()) {

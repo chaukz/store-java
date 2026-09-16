@@ -40,8 +40,6 @@ public class ProductMapper {
         product.setDescription(request.description());
         product.setSku(request.sku());
         product.setBrand(request.brand());
-        product.setPrice(request.price());
-        product.setStockQuantity(request.stockQuantity());
         product.setActive(request.active() != null ? request.active() : true);
     }
 
@@ -54,8 +52,6 @@ public class ProductMapper {
                 product.getDescription(),
                 product.getSku(),
                 product.getBrand(),
-                product.getPrice(),
-                product.getStockQuantity(),
                 product.getActive(),
                 product.getCreatedAt()
         );

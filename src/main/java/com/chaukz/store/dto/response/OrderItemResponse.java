@@ -7,6 +7,7 @@ public record OrderItemResponse(
         Long productVariantId,
         Long productId,
         String productName,
+        String productSku,
         String size,
         String color,
         BigDecimal price,

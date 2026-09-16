@@ -146,6 +146,7 @@ class OrderServiceTest {
         assertThat(response.orderStatus()).isEqualTo(OrderStatus.PENDING);
         assertThat(response.paymentStatus()).isEqualTo(PaymentStatus.PENDING);
         assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).productName()).isEqualTo("Running Sneaker");
 
         // Stock reduced: started at 10, bought 3
         assertThat(variant.getStockQuantity()).isEqualTo(7);
@@ -256,6 +257,36 @@ class OrderServiceTest {
         assertThat(variant.getStockQuantity()).isEqualTo(13); // 10 + 3 restored
         assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.CANCELLED);
         assertThat(payment.getPaymentStatus()).isEqualTo(PaymentStatus.FAILED);
+    }
+
+    @Test
+    void cancel_paidOrder_setsPaymentToRefunded() {
+        Order order = buildOrder(500L, user, OrderStatus.PROCESSING);
+
+        OrderItem orderItem = new OrderItem();
+        orderItem.setId(900L);
+        orderItem.setOrder(order);
+        orderItem.setProductVariant(variant);
+        orderItem.setQuantity(3);
+
+        Payment payment = new Payment();
+        payment.setId(700L);
+        payment.setOrder(order);
+        payment.setPaymentStatus(PaymentStatus.PAID);
+
+        when(orderRepository.findById(500L)).thenReturn(Optional.of(order));
+        when(currentUserService.getCurrentUserId()).thenReturn(1L);
+        when(orderItemRepository.findByOrderIdInWithVariantAndProduct(List.of(500L))).thenReturn(List.of(orderItem));
+        when(orderItemRepository.findByOrderId(500L)).thenReturn(List.of(orderItem));
+        when(paymentRepository.findByOrderId(500L)).thenReturn(Optional.of(payment));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(productVariantRepository.save(any(ProductVariant.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.cancel(500L);
+
+        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(payment.getPaymentStatus()).isEqualTo(PaymentStatus.REFUNDED);
+        assertThat(variant.getStockQuantity()).isEqualTo(13); // 10 + 3 restored
     }
 
     @Test
